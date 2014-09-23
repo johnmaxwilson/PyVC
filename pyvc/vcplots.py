@@ -2233,68 +2233,57 @@ def plot_event_field(sim_file, evnum, output_directory, field_type='displacement
         fault_traces = geometry.get_fault_traces()
         event_sections = geometry.sections_with_elements(event_element_slips.keys())
     
-    sys.stdout.write('{} elements in {} sections : '.format(len(event_element_slips), len(event_sections)))
-    sys.stdout.flush()
-    
-    sys.stdout.write( '{} field : '.format(field_type))
-    sys.stdout.flush()
-    
-    if field_type == 'displacement':
-        EF = vcutils.VCDisplacementField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
-    elif field_type == 'gravity':
-        EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=True)
-    elif field_type == 'dilat_gravity':
-        EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=False)
-
-
-    sys.stdout.write('done\n')
-    sys.stdout.flush()
-
-    field_values_loaded = EF.load_field_values(PRE)
-    
-    if lat_lon:
-        EF.save_lat_lon_values(PRE)
-        sys.stdout.write('\n***Latitude and longitude values written to file.')
-    
- 
-    if field_values_loaded:
-        sys.stdout.write('Loading event {} {} field :: '.format(evnum, field_type))
-        sys.stdout.flush()
-    if not field_values_loaded:
-        sys.stdout.write('Processing event {} {} field :: '.format(evnum, field_type))
-        sys.stdout.flush()          
-        sys.stdout.write('{} elements : '.format(len(event_element_slips)))
+        sys.stdout.write('{} elements in {} sections : '.format(len(event_element_slips), len(event_sections)))
         sys.stdout.flush()
         
-        EF.calculate_field_values(
-                    event_element_data,
-                    event_element_slips,
-                    cutoff=cutoff,
-                    save_file_prefix=PRE)
+        sys.stdout.write( '{} field : '.format(field_type))
+        sys.stdout.flush()
+        
+        if field_type == 'displacement':
+            EF = vcutils.VCDisplacementField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
+        elif field_type == 'gravity':
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=True)
+        elif field_type == 'dilat_gravity':
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=False)
 
 
-    
-    #if field_type == 'displacement':
-    #    np.save('local/dX.npy', EF.dX)
-    #    np.save('local/dY.npy', EF.dY)
-    #    np.save('local/dZ.npy', EF.dZ)
-    #    #EF.dX = np.load('local/dX.npy')
-    #    #EF.dY = np.load('local/dY.npy')
-    #    #EF.dZ = np.load('local/dZ.npy')
-    #elif field_type == 'gravity':
-    #    np.save('local/dG.npy', EF.dG)
-    #    #EF.dG = np.load('local/dG.npy')
-    
-    sys.stdout.write('done\n')
-    sys.stdout.flush()
+        sys.stdout.write('done\n')
+        sys.stdout.flush()
 
-    sys.stdout.write('Plotting :: initializing : ')
-    sys.stdout.flush()
+        field_values_loaded = EF.load_field_values(PRE)
+        
+        if lat_lon:
+            EF.save_lat_lon_values(PRE)
+            sys.stdout.write('\n***Latitude and longitude values written to file.')
+        
+     
+        if field_values_loaded:
+            sys.stdout.write('Loading event {} {} field :: '.format(evnum, field_type))
+            sys.stdout.flush()
+        if not field_values_loaded:
+            sys.stdout.write('Processing event {} {} field :: '.format(evnum, field_type))
+            sys.stdout.flush()          
+            sys.stdout.write('{} elements : '.format(len(event_element_slips)))
+            sys.stdout.flush()
+            
+            EF.calculate_field_values(
+                        event_element_data,
+                        event_element_slips,
+                        cutoff=cutoff,
+                        save_file_prefix=PRE)
 
-    if field_type == 'displacement':
-        EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
-    elif field_type == 'gravity' or field_type == 'dilat_gravity':
-        EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+        
+        sys.stdout.write('done\n')
+        sys.stdout.flush()
+
+        sys.stdout.write('Plotting :: initializing : ')
+        sys.stdout.flush()
+
+        if field_type == 'displacement':
+            EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+            EFP.calculate_look_angles(geometry[:])
+        elif field_type == 'gravity' or field_type == 'dilat_gravity':
+            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
 
     generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type=field_type,hi_res=hi_res)
 
@@ -4699,7 +4688,8 @@ def diff_composite_fields(sim_file, event_ids,field1dir,field2dir,
 def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='gravity',hi_res=False):
 
     # Send field values to be plotted
-    EFP.set_field(EF)                
+    EFP.set_field(EF) 
+
   
     sys.stdout.write('\nmap image : ')
     sys.stdout.flush()

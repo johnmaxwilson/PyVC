@@ -687,10 +687,10 @@ class VCDisplacementFieldPlotter(object):
             'map_frame_color':      '#000000',
             'map_frame_color_f':    '#000000',
             'map_frame_width':      1,
-            'map_fontsize':         12,
-            'arrow_inset':          10.0,
-            'arrow_fontsize':       9.0,
-            'cb_fontsize':          10.0,
+            'map_fontsize':         16, #12
+            'arrow_inset':          16.0, #10
+            'arrow_fontsize':       10.0, # 9
+            'cb_fontsize':          14.0, #10
             'cb_fontcolor':         '#000000',
             'cb_fontcolor_f':       '#000000',
             'cb_height':            20.0,
@@ -981,11 +981,11 @@ class VCGravityFieldPlotter(object):
             'map_frame_color':      '#000000',
             'map_frame_width':      1,
         #map_fontsize = 12
-            'map_fontsize':         12,
-            'arrow_inset':          10.0,
-            'arrow_fontsize':       9.0,
+            'map_fontsize':         12,   # 12
+            'arrow_inset':          10.0, # 10
+            'arrow_fontsize':       12.0, #  9
         #cb_fontsize = 12
-            'cb_fontsize':          12.0,
+            'cb_fontsize':          15.0, # 12
             'cb_fontcolor':         '#000000',
             'cb_height':            20.0,
             'cb_margin_t':          10.0,
