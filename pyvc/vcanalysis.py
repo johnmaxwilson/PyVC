@@ -118,6 +118,31 @@ def sim_info(sim_file, sortby='event_magnitude', show=50, event_range=None, sect
             print '{ev_num:<10}{ev_year:<10.2f}{ev_mag:<10.2f}'.format(ev_num=event_data['event_number'][i], ev_year=event_data['event_year'][i], ev_mag=event_data['event_magnitude'][i])
 
 #-------------------------------------------------------------------------------
+def eq_info(sim_file, evnums):
+
+     with VCSimData() as sim_data:
+     
+        # open the simulation data file
+        sim_data.open_file(sim_file)
+
+        # instantiate the vc classes passing in an instance of the VCSimData
+        # class
+        events = VCEvents(sim_data)
+
+        requested_data = ['event_number', 'event_year', 'event_magnitude','event_average_slip','event_surface_rupture_length']
+        
+        event_data = events.get_event_data_from_evnums(evnums, requested_data)
+        
+        print '\n{0:<10}{1:<10}{2:<10}{3:<10}{4:<10}'.format('num','year','magnitude','slip [m]','rupt.len [km]')
+
+        for i in range(len(evnums)):
+            print '{ev_num:<10}{ev_year:<10.2f}{ev_mag:<10.2f}{ev_av_slip:<10.2f}{ev_rup_len:<10.2f}'.format(ev_num=event_data['event_number'][i], ev_year=event_data['event_year'][i], ev_mag=event_data['event_magnitude'][i],ev_av_slip=event_data['event_average_slip'][i],ev_rup_len=event_data['event_surface_rupture_length'][i]/1000.0)
+        print "\n"
+  
+
+
+
+#-------------------------------------------------------------------------------
 def detailed_sim_info(sim_file, sortby='event_magnitude', show=15, event_range=None, section_filter=None, magnitude_filter=None,return_evnums=False,min_mag=0.0):
 
      with VCSimData() as sim_data:
