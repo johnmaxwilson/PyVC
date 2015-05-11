@@ -31,6 +31,64 @@ from networkx.algorithms import bipartite
 import quakelib
 
 
+
+#-------------------------------------------------------------------------------
+# New plot to check median recurrence interval vs mode  
+#-------------------------------------------------------------------------------
+def recurrence_stats(sim_file, event_range=None, section_filter=None,
+    magnitude_filter=None, Nbins=20, title_str=""):
+
+    #---------------------------------------------------------------------------
+    # Get the data.
+    #---------------------------------------------------------------------------
+    with VCSimData() as sim_data:
+        # open the simulation data file
+        sim_data.open_file(sim_file)
+
+        # instantiate the vc classes passing in an instance of the VCSimData
+        # class
+        events = VCEvents(sim_data)
+        
+        event_data = events.get_event_data(['event_number', 'event_year', 'event_magnitude', 'event_range_duration'], event_range=event_range, magnitude_filter=magnitude_filter, section_filter=section_filter)
+
+
+    intervals = np.array([   x - event_data['event_year'][n-1]
+                    for n,x in enumerate(event_data['event_year'])
+                    if n != 0
+                ])
+    
+    # Plot histogram of recurrence intervals
+    recurr_ax = mplt.subplot(111)
+    recurr_ax.hist(intervals, Nbins,color='g')
+    mplt.xlabel("Recurrence interval [years]")
+    mplt.title("Recurrence intervals for "+str(len(intervals))+" M "+magnitude_filter+" "+title_str+" EQs ")
+    
+    # Generate CDF, find median
+    cumulative = {}
+    cumulative['x'] = np.sort(intervals)
+    cumulative['y'] = np.arange(float(intervals.size))/float(intervals.size)
+    
+    # Find median
+    median_index = (np.abs(np.array(cumulative['y'])-0.5)).argmin()
+    median_recurr = cumulative['x'][median_index]
+    mean_recurrence = np.mean(intervals)
+    
+    sys.stdout.write("\nMedian recurrence: "+str(median_recurr)+" years")
+    sys.stdout.write("\nMean recurrence: "+str(mean_recurrence)+" years\n")
+
+    # Draw verticle lines denoting the mean and median
+    recurr_ax.axvline(x=median_recurr,ymax=mplt.ylim()[1], 
+            label="median = {:5.2f}".format(median_recurr), color='r')
+    recurr_ax.axvline(x=median_recurr,ymax=mplt.ylim()[1],
+            label="mean = {:5.2f}".format(mean_recurrence), color='k')
+            
+    mplt.legend(loc='best')
+    
+    mplt.savefig('local/test.pdf', dpi=70)
+
+
+
+
 #-------------------------------------------------------------------------------
 # Save all forecast plots in one column of many subplots  
 #-------------------------------------------------------------------------------
@@ -1251,7 +1309,7 @@ def forecast_plots(sim_file, event_graph_file=None, event_sequence_graph_file=No
 
         
     
-    if year_eval is not None:
+    if year_eval is not None and year_eval != 0:
         t0_dt_ax.axvline(x=year_eval,ymin=0,ymax=wait_75,color='blue',linewidth=t0_dt_main_line_width,linestyle='--')
     
     
@@ -2175,7 +2233,7 @@ def event_field_animation(sim_file, output_directory, event_range,
 #-------------------------------------------------------------------------------
 # plots event fields
 #-------------------------------------------------------------------------------
-def plot_event_field(sim_file, evnum, output_directory, field_type='displacement', fringes=True, padding=0.08, cutoff=None, tag=None, hi_res=False,lat_lon=False):
+def plot_event_field(sim_file, evnum, output_directory, field_type='displacement', fringes=True, padding=0.08, cutoff=None, tag=None, hi_res=False,lat_lon=False, angles=None, contours=None):
     
     sys.stdout.write('Initializing plot :: ')
     sys.stdout.flush()
@@ -2281,11 +2339,14 @@ def plot_event_field(sim_file, evnum, output_directory, field_type='displacement
 
         if field_type == 'displacement':
             EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
-            EFP.calculate_look_angles(geometry[:])
+            if angles is None:
+                EFP.calculate_look_angles(geometry[:])
+            else:
+                EFP.set_look_angles(angles[0], angles[1])
         elif field_type == 'gravity' or field_type == 'dilat_gravity':
-            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, contours=contours)
 
-    generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type=field_type,hi_res=hi_res)
+    generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,event_sections,field_type=field_type,hi_res=hi_res)
 
     """
     EFP.set_field(EF)
@@ -3076,7 +3137,7 @@ def space_time_plot(sim_file, output_file=None, event_range=None, section_filter
 #-------------------------------------------------------------------------------
 # magnitude rupture area plot
 #-------------------------------------------------------------------------------
-def magnitude_rupture_area(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None):
+def magnitude_rupture_area(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None, scale=False):
     #---------------------------------------------------------------------------
     # Instantiate the VCSimData class using the with statement. Then instantiate
     # VCEvents class from within the with block. This ensures that the sim data
@@ -3116,18 +3177,19 @@ def magnitude_rupture_area(sim_file, output_file=None, event_range=None, section
     # do the standard plot
     vcplotutils.standard_plot(output_file, event_area_kmsq, event_data['event_magnitude'],
         axis_format='semilogx',
+        scale=scale,
         add_lines=[
             {'label':'binned average', 'x':x_ave, 'y':y_ave},
             {'label':'WC', 'x':x_WC, 'y':y_WC, 'ls':'--', 'c':'red'}
         ],
-        axis_labels = {'x':r'log(Rupture Area [km$^\mathsf{2}$])', 'y':'Magnitude'},
+        axis_labels = {'x':r'Rupture Area [km$^\mathsf{2}$]', 'y':'Magnitude'},
         plot_label='Magnitude-Rupture Area{}'.format(plot_label)
     )
         
 #-------------------------------------------------------------------------------
 # magnitude average slip plot
 #-------------------------------------------------------------------------------
-def magnitude_average_slip(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None):
+def magnitude_average_slip(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None, scale=False):
     #---------------------------------------------------------------------------
     # Instantiate the VCSimData class using the with statement. Then instantiate
     # VCEvents class from within the with block. This ensures that the sim data
@@ -3164,18 +3226,19 @@ def magnitude_average_slip(sim_file, output_file=None, event_range=None, section
     # do the standard plot
     vcplotutils.standard_plot(output_file, event_data['event_average_slip'], event_data['event_magnitude'],
         axis_format='semilogx',
+        scale=scale,
         add_lines=[
             {'label':'binned average', 'x':x_ave, 'y':y_ave},
             {'label':'WC', 'x':x_WC, 'y':y_WC, 'ls':'--', 'c':'red'}
         ],
-        axis_labels = {'y':'Magnitude', 'x':'log(Average Slip [m])'},
+        axis_labels = {'y':'Magnitude', 'x':'Average Slip [m]'},
         plot_label='Magnitude-Average Slip{}'.format(plot_label)
     )
 
 #-------------------------------------------------------------------------------
 # average slip surface rupture length plot
 #-------------------------------------------------------------------------------
-def average_slip_surface_rupture_length(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None):
+def average_slip_surface_rupture_length(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None, scale=False):
     #---------------------------------------------------------------------------
     # Instantiate the VCSimData class using the with statement. Then instantiate
     # VCEvents class from within the with block. This ensures that the sim data
@@ -3215,18 +3278,19 @@ def average_slip_surface_rupture_length(sim_file, output_file=None, event_range=
     # do the standard plot
     vcplotutils.standard_plot(output_file, event_surface_rupture_length_km, event_data['event_average_slip'],
         axis_format='loglog',
+        scale=scale,
         add_lines=[
             {'label':'binned average', 'x':x_ave, 'y':y_ave},
             {'label':'WC', 'x':x_WC, 'y':y_WC, 'ls':'--', 'c':'red'}
         ],
-        axis_labels = {'y':'log(Average Slip [m])', 'x':'log(Surface Rupture Length [km])'},
+        axis_labels = {'y':'log(Average Slip [m])', 'x':'Surface Rupture Length [km]'},
         plot_label='Average Slip-Surface Rupture Length{}'.format(plot_label)
     )
 
 #-------------------------------------------------------------------------------
 # frequency magnitude plot
 #-------------------------------------------------------------------------------
-def frequency_magnitude(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None):
+def frequency_magnitude(sim_file, output_file=None, event_range=None, section_filter=None, magnitude_filter=None, scale=False):
     #---------------------------------------------------------------------------
     # Instantiate the VCSimData class using the with statement. Then instantiate
     # VCEvents class from within the with block. This ensures that the sim data
@@ -3280,8 +3344,10 @@ def frequency_magnitude(sim_file, output_file=None, event_range=None, section_fi
     # do the standard plot
     vcplotutils.standard_plot(output_file, x, y,
         axis_format='semilogy',
-        add_lines=[{'label':'b=1', 'x':x_b1, 'y':y_b1}, {'label':'UCERF2', 'x':x_UCERF, 'y':y_UCERF, 'ls':'--', 'c':'red', 'y_error':y_error_UCERF}],
-        axis_labels = {'y':'log(# events per year)', 'x':'Magnitude'},
+        scale=scale,
+        #add_lines=[{'label':'b=1', 'x':x_b1, 'y':y_b1}, {'label':'UCERF2', 'x':x_UCERF, 'y':y_UCERF, 'ls':'--', 'c':'red', 'y_error':y_error_UCERF}],
+        add_lines=[{'label':'UCERF2', 'x':x_UCERF, 'y':y_UCERF, 'ls':'--', 'c':'red', 'y_error':y_error_UCERF}],
+        axis_labels = {'y':'events per year', 'x':'Magnitude'},
         plot_label='Frequency-Magnitude{}'.format(plot_label),
         connect_points=True,
         legend_loc='upper right'
@@ -4685,7 +4751,7 @@ def diff_composite_fields(sim_file, event_ids,field1dir,field2dir,
     
     
 #---------------------------------------------------------------------------
-def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='gravity',hi_res=False):
+def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,event_sections,field_type='gravity',hi_res=False):
 
     # Send field values to be plotted
     EFP.set_field(EF) 
@@ -4810,16 +4876,17 @@ def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='
     
     # draw parallels.
     parallels = np.linspace(EFP.lats_1d.min(), EFP.lats_1d.max(), num_grid_lines+1)
-    m4_parallels = m4.drawparallels(parallels, labels=[1,0,0,0], fontsize=map_fontsize, color=grid_color, fontproperties=font, fmt='%.2f', linewidth=grid_width, dashes=[1, 10])
+    m4_parallels = m4.drawparallels(parallels, labels=[1,0,0,0], color=grid_color, fontproperties=font, fmt='%.2f', linewidth=grid_width, dashes=[1, 10], fontsize=map_fontsize)
     
     # draw meridians
     meridians = np.linspace(EFP.lons_1d.min(), EFP.lons_1d.max(), num_grid_lines+1)
-    m4_meridians = m4.drawmeridians(meridians, labels=[0,0,1,0], fontsize=map_fontsize, color=grid_color, fontproperties=font, fmt='%.2f', linewidth=grid_width, dashes=[1, 10])
+    m4_meridians = m4.drawmeridians(meridians, labels=[0,0,1,0], color=grid_color, fontproperties=font, fmt='%.2f', linewidth=grid_width, dashes=[1, 10], fontsize=map_fontsize)
 
     if field_type == 'displacement':
+        box_size = 70.0
         # draw the azimuth look arrow
-        az_width_frac    = 50.0/pw
-        az_height_frac   = 50.0/ph
+        az_width_frac    = box_size/pw
+        az_height_frac   = box_size/ph
         az_left_frac     = (70.0 + mw - arrow_inset - pw*az_width_frac)/pw
         az_bottom_frac   = (70.0 + mh - arrow_inset - ph*az_height_frac)/ph
         az_ax = fig4.add_axes((az_left_frac,az_bottom_frac,az_width_frac,az_height_frac))
@@ -4840,8 +4907,8 @@ def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='
         az_ax.text(1.0, 1.0, 'az = {:0.1f}{}'.format(EF.convert.rad2deg(EFP.look_azimuth),r'$^{\circ}$'), fontproperties=font_bold, size=arrow_fontsize, ha='right', va='top')
 
         # draw the altitude look arrow
-        al_width_frac    = 50.0/pw
-        al_height_frac   = 50.0/ph
+        al_width_frac    = box_size/pw
+        al_height_frac   = box_size/ph
         al_left_frac     = (70.0 + mw - arrow_inset - pw*az_width_frac)/pw
         al_bottom_frac   = (70.0 + mh - arrow_inset - ph*az_height_frac - ph*al_height_frac)/ph
         al_ax = fig4.add_axes((al_left_frac,al_bottom_frac,al_width_frac,al_height_frac))
@@ -4862,8 +4929,8 @@ def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='
         al_ax.text(1.0, 1.0, 'al = {:0.1f}{}'.format(EF.convert.rad2deg(EFP.look_elevation),r'$^{\circ}$'), fontproperties=font_bold, size=arrow_fontsize, ha='right', va='top')
         
         # draw the box with the magnitude
-        mag_width_frac    = 50.0/pw
-        mag_height_frac   = 10.0/ph
+        mag_width_frac    = box_size/pw
+        mag_height_frac   = 15.0/ph    # originally 10.0/ph
         mag_left_frac     = (70.0 + mw - arrow_inset - pw*az_width_frac)/pw
         mag_bottom_frac   = (70.0 + mh - arrow_inset - ph*az_height_frac  - ph*az_height_frac - ph*mag_height_frac)/ph
         mag_ax = fig4.add_axes((mag_left_frac,mag_bottom_frac,mag_width_frac,mag_height_frac))
@@ -4882,7 +4949,10 @@ def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,field_type='
     for sid, sec_trace in fault_traces_latlon.iteritems():
         trace_Xs, trace_Ys = m4(sec_trace[1], sec_trace[0])
         
-        linewidth = fault_width
+        if sid in event_sections:
+            linewidth = fault_width + 2.5
+        else:
+            linewidth = fault_width
 
         m4.plot(trace_Xs, trace_Ys, color=fault_color, linewidth=linewidth, solid_capstyle='round', solid_joinstyle='round')
 

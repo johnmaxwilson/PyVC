@@ -87,12 +87,14 @@ def calculate_averages(x,y):
 #-------------------------------------------------------------------------------
 # standard plotting routine for scaling plots
 #-------------------------------------------------------------------------------
-def standard_plot(output_file, x, y, legend_loc='best', **kwargs):
+def standard_plot(output_file, x, y, legend_loc='best', scale=False, **kwargs):
     add_lines = kwargs.get('add_lines')
     axis_labels = kwargs.get('axis_labels')
     plot_label = kwargs.get('plot_label')
     connect_points = kwargs.get('connect_points')
     axis_format = kwargs.get('axis_format')
+    
+    freq_mag = False
     
     if output_file is not None:
         plot_format = output_file.split('.')[-1]
@@ -110,12 +112,12 @@ def standard_plot(output_file, x, y, legend_loc='best', **kwargs):
         # set up plot dimensions (all values in pixels)
         #-----------------------------------------------------------------------
         # the full image width
-        imw = 501.0
+        imw = 501.0+15
         # the full image height
         imh = 501.0 
         # the left margin and bottom margin
         if axis_labels is not None:
-            lm = 45.0
+            lm = 45.0+15
             bm = 45.0
         else:
             lm = 10.0
@@ -158,9 +160,9 @@ def standard_plot(output_file, x, y, legend_loc='best', **kwargs):
         #-----------------------------------------------------------------------
         # set up the plot fonts
         #-----------------------------------------------------------------------
-        ticklabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=9)
-        framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=10)
-        legendfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=10)
+        ticklabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=15)
+        framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=16)
+        legendfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=16)
         if len(plot_label) > 100:
             title_size = 9
         elif len(plot_label) <= 100 and len(plot_label) > 89:
@@ -187,6 +189,10 @@ def standard_plot(output_file, x, y, legend_loc='best', **kwargs):
         # plot any additional lines
         if add_lines is not None:
             for line in add_lines:
+                # Catch if it's a freq-mag plot, need to adjust plotting bounds
+                if line['label'] == 'UCERF2':
+                    freq_mag = True
+                    
                 try:
                     ls_extra = line['ls']
                 except KeyError:
@@ -228,6 +234,16 @@ def standard_plot(output_file, x, y, legend_loc='best', **kwargs):
         # create a legend if we have extra lines
         if add_lines is not None:
             the_ax.legend(prop=legendfont, loc=legend_loc)
+            
+        # Schultz: adding this parameter to zoom into only the x/y data range
+        if scale:
+            if freq_mag:
+                the_ax.set_xlim(min(x)*.99,max(x))
+                the_ax.set_ylim(min(y),max(y)*5)
+            else:
+                the_ax.set_xlim(min(x),max(x))
+                the_ax.set_ylim(min(y),max(y))
+            
         
         if output_file is not None:
             # save the plot
@@ -687,14 +703,14 @@ class VCDisplacementFieldPlotter(object):
             'map_frame_color':      '#000000',
             'map_frame_color_f':    '#000000',
             'map_frame_width':      1,
-            'map_fontsize':         16, #12
-            'arrow_inset':          16.0, #10
-            'arrow_fontsize':       10.0, # 9
-            'cb_fontsize':          14.0, #10
+            'map_fontsize':         36.0, #12
+            'arrow_inset':          18.0, #10
+            'arrow_fontsize':       14.0, # 9
+            'cb_fontsize':          20.0, #10
             'cb_fontcolor':         '#000000',
             'cb_fontcolor_f':       '#000000',
             'cb_height':            20.0,
-            'cb_margin_t':          10.0
+            'cb_margin_t':          4.0
         }
         
         #-----------------------------------------------------------------------
@@ -936,14 +952,24 @@ class VCDisplacementFieldPlotter(object):
         if average_rake >= math.pi/2.0:
             average_rake = math.pi - average_rake
         self.look_elevation = abs(average_rake)
+        
+    # --------------------------------------------------------------------------    
+    def set_look_angles(self, azimuth, elevation):
+        self.look_azimuth = azimuth
+        self.look_elevation = elevation
+
+        
+        
+        
 
 #-------------------------------------------------------------------------------
 # A class to handle plotting event gravity fields
 #-------------------------------------------------------------------------------
 class VCGravityFieldPlotter(object):
-    def __init__(self, min_lat, max_lat, min_lon, max_lon, map_res='i', map_proj='cyl'):
+    def __init__(self, min_lat, max_lat, min_lon, max_lon, map_res='i', map_proj='cyl', contours=None):
         
         self.norm = None
+        self.contours = contours
         
         #-----------------------------------------------------------------------
         # Gravity map configuration
@@ -981,14 +1007,14 @@ class VCGravityFieldPlotter(object):
             'map_frame_color':      '#000000',
             'map_frame_width':      1,
         #map_fontsize = 12
-            'map_fontsize':         12,   # 12
-            'arrow_inset':          10.0, # 10
+            'map_fontsize':         16.0,   # 12   THIS IS BROKEN
+            'arrow_inset':          14.0, # 10
             'arrow_fontsize':       12.0, #  9
         #cb_fontsize = 12
-            'cb_fontsize':          15.0, # 12
+            'cb_fontsize':          20.0, # 12
             'cb_fontcolor':         '#000000',
             'cb_height':            20.0,
-            'cb_margin_t':          10.0,
+            'cb_margin_t':          2.0, # 10
          #min/max gravity change labels for colorbar (in microgals)
             'cbar_min':             -20,
             'cbar_max':             20
@@ -1099,7 +1125,12 @@ class VCGravityFieldPlotter(object):
         
         #self.m2.imshow(dG_transformed, cmap=cmap, norm=self.norm)
         # Changed units to microgals (multiply MKS unit by 10^8)
-        self.m2.imshow(dG_transformed*float(pow(10,8)), cmap=cmap, norm=self.norm)
+        if self.contours is None:
+            self.m2.imshow(dG_transformed*float(pow(10,8)), cmap=cmap, norm=self.norm)
+        else:
+            map_x, map_y = self.m2(self.lons_1d, self.lats_1d)
+            XX,YY = np.meshgrid(map_x, map_y)
+            self.m2.contourf(XX, YY, dG_transformed*float(pow(10,8)), self.contours, cmap=cmap, norm=self.norm, extend='both')
 
         #-----------------------------------------------------------------------
         # Fig3 is the land/sea mask.
