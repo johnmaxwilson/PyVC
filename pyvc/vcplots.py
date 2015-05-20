@@ -1512,7 +1512,7 @@ def forecast_plots(sim_file, event_graph_file=None, event_sequence_graph_file=No
 def event_field_animation(sim_file, output_directory, event_range,
     field_type='displacement', fringes=True, padding=0.08, cutoff=None,
     animation_target_length=60.0, animation_fps = 30.0, fade_seconds = 1.0,
-    min_mag_marker = 6.5, force_plot=False):
+    min_mag_marker = 6.5, force_plot=False, contours=None):
     
     sys.stdout.write('Initializing animation :: ')
     sys.stdout.flush()
@@ -1582,7 +1582,7 @@ def event_field_animation(sim_file, output_directory, event_range,
             EFP.calculate_look_angles(geometry[:])
         elif field_type == 'gravity':
             EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
-            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, contours=contours)
 
         #-----------------------------------------------------------------------
         # Find the biggest event and normalize based on these values.
