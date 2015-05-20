@@ -695,7 +695,7 @@ def plot_forecast(sim_file, output_file=None, event_graph_file=None,
 # Save each individual subplot from plot_forecast
 #-------------------------------------------------------------------------------
 def forecast_plots(sim_file, event_graph_file=None, event_sequence_graph_file=None, event_range=None, section_filter=None, magnitude_filter=None, padding=0.08, fixed_dt=30.0, fname_tag=None,weibull=False,
-    tau=166.0,beta=1.5,year_eval=None,P_t_t0_eval=None):
+    tau=166.0,beta=1.5,year_eval=None,dt_and_t0=None):
     #---------------------------------------------------------------------------
     # Plot parameters.
     #---------------------------------------------------------------------------
@@ -1002,19 +1002,21 @@ def forecast_plots(sim_file, event_graph_file=None, event_sequence_graph_file=No
         sys.stdout.write('\n75% waiting time: {:.2f} years'.format(wait_75))
         sys.stdout.write('\n=======================================\n\n')
     
-    if P_t_t0_eval is not None:
-        t = P_t_t0_eval[0]
-        t0 = int(P_t_t0_eval[1])
+    if dt_and_t0 is not None:
+        dt = int(dt_and_t0[0])
+        t0 = int(dt_and_t0[1])
 
-        #ind_t = (np.abs(np.array(conditional[t0]['x'])-t)).argmin()
-        #Since my conditional distribution is evaluated every year..
-        ind_t     = int(t)
-        prob_t_t0 = conditional[t0]['y'][ind_t]
+        # P(t0 < t < t0+dt) = cond[t0+dt] - cond[t0]
+        #upper = (np.abs(np.array(conditional[t0]['x'])-t0+dt)).argmin()
+        #lower = (np.abs(np.array(conditional[t0]['x'])-t0)).argmin()
+        #prob_in_t0_dt = conditional[t0]['y'][upper] - conditional[t0]['y'][lower]
 
-        sys.stdout.write('\n index for t = {} is {}\n'.format(t,ind_t))
+        prob_in_t0_dt = conditional[t0]['y'][dt] - conditional[t0]['y'][0]
 
-        sys.stdout.write('\n ---------- evaluating P(t,t0) -------')
-        sys.stdout.write('\n P({},{}) = {}\n\n'.format(t,t0,prob_t_t0))
+        #sys.stdout.write('\n upper/lower index for t0/t0+dt={}/{} is {}/{} \n'.format(t0,t0+dt,lower,upper))
+
+        sys.stdout.write('\n ---------- evaluating P(t0 < t < t0+dt) -------')
+        sys.stdout.write('\n P({} < t < {}) = {}\n\n'.format(t0,t0+dt,prob_in_t0_dt))
 
 
 
@@ -1512,7 +1514,7 @@ def forecast_plots(sim_file, event_graph_file=None, event_sequence_graph_file=No
 def event_field_animation(sim_file, output_directory, event_range,
     field_type='displacement', fringes=True, padding=0.08, cutoff=None,
     animation_target_length=60.0, animation_fps = 30.0, fade_seconds = 1.0,
-    min_mag_marker = 6.5, force_plot=False):
+    min_mag_marker = 6.5, force_plot=False, contours=None):
     
     sys.stdout.write('Initializing animation :: ')
     sys.stdout.flush()
@@ -1582,7 +1584,7 @@ def event_field_animation(sim_file, output_directory, event_range,
             EFP.calculate_look_angles(geometry[:])
         elif field_type == 'gravity':
             EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
-            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, contours=contours)
 
         #-----------------------------------------------------------------------
         # Find the biggest event and normalize based on these values.
@@ -4975,6 +4977,11 @@ def generate_map(EF,EFP,fault_traces,fringes,event_data,output_file,event_sectio
 
     elif field_type == 'gravity' or field_type == 'dilat_gravity':
         cb_title        = r'Gravity changes [$\mu gal$]'
+
+        # If contour plot, match colorbar ticks to contour values
+        if EFP.contours is not None:
+            cb.set_ticks(EFP.contours)
+
         # Make first and last ticks on colorbar be <MIN and >MAX
         cb_tick_labs    = [item.get_text() for item in cb_ax.get_xticklabels()]
         cb_tick_labs[0] = '<'+cb_tick_labs[0]
