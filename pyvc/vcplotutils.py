@@ -649,10 +649,10 @@ class SpaceTimePlotter(multiprocessing.Process):
 # A class to handle plotting event displacement fields
 #-------------------------------------------------------------------------------
 class VCDisplacementFieldPlotter(object):
-    def __init__(self, min_lat, max_lat, min_lon, max_lon, map_res='i', map_proj='cyl'):
+    def __init__(self, min_lat, max_lat, min_lon, max_lon, map_res='i', map_proj='cyl', wavelength=0.03):
         self.look_azimuth = None
         self.look_elevation = None
-        self.wavelength = 0.03
+        self.wavelength = wavelength
         
         self.norm = None
         
@@ -1121,7 +1121,10 @@ class VCGravityFieldPlotter(object):
         if self.norm is None:
             #self.norm = mcolor.Normalize(vmin=np.amin(dG_transformed), vmax=np.amax(dG_transformed))
             # Changed units to microgals (multiply MKS unit by 10^8)
-            self.norm = mcolor.Normalize(vmin=self.dmc['cbar_min'], vmax=self.dmc['cbar_max'])
+            if self.contours is not None:
+                self.norm = mcolor.Normalize(vmin=self.contours[0], vmax=self.contours[-1])
+            else:
+                self.norm = mcolor.Normalize(vmin=self.dmc['cbar_min'], vmax=self.dmc['cbar_max'])
         
         #self.m2.imshow(dG_transformed, cmap=cmap, norm=self.norm)
         # Changed units to microgals (multiply MKS unit by 10^8)

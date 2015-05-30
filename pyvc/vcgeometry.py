@@ -83,6 +83,29 @@ class VCGeometry(VCSys):
             return [self.geometry_data[elements[0]]['section_id']]
     
     
+#    def bounds_xyz_from_sections(self, sections):
+#        min_x = min(element_data[0]['m_x_pt1'], element_data[0]['m_x_pt4'])
+#        max_x = max(element_data[0]['m_x_pt1'], element_data[0]['m_x_pt4'])
+#        min_y = min(element_data[0]['m_y_pt1'], element_data[0]['m_y_pt4'])
+#        max_y = max(element_data[0]['m_y_pt1'], element_data[0]['m_y_pt4'])
+#        if len(element_data) > 1:
+#            for block in element_data:
+#                if block['m_x_pt1'] < min_x: min_x = block['m_x_pt1']
+#                if block['m_x_pt4'] < min_x: min_x = block['m_x_pt4']
+#                if block['m_x_pt1'] > max_x: max_x = block['m_x_pt1']
+#                if block['m_x_pt4'] > max_x: max_x = block['m_x_pt4']
+#                if block['m_y_pt1'] < min_y: min_y = block['m_y_pt1']
+#                if block['m_y_pt4'] < min_y: min_y = block['m_y_pt4']
+#                if block['m_y_pt1'] > max_y: max_y = block['m_y_pt1']
+#                if block['m_y_pt4'] > max_y: max_y = block['m_y_pt4']
+#        if len(element_data) < 10:
+#            min_x = min_x - (max_x-min_x)*.5
+#            max_x = max_x + (max_x-min_x)*.5
+#            min_y = min_y - (max_y-min_y)*.5
+#            max_y = max_y + (max_y-min_y)*.5
+#        return [min_x,max_x,min_y,max_y]
+            
+    
     
     def get_slip_rates(self,section_filter=None,per_year=True):
         rates = {}

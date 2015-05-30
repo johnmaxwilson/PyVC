@@ -1583,13 +1583,16 @@ def event_field_animation(sim_file, output_directory, event_range,
             EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
             EFP.calculate_look_angles(geometry[:])
         elif field_type == 'gravity':
-            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,  free_air=True)
+            EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, contours=contours)
+        elif field_type == 'dilat_gravity':
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,  free_air=False)
             EFP = vcplotutils.VCGravityFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, contours=contours)
 
         #-----------------------------------------------------------------------
         # Find the biggest event and normalize based on these values.
         #-----------------------------------------------------------------------
-        if field_type == 'displacement' and not fringes or field_type == 'gravity':
+        if field_type == 'displacement' and not fringes or field_type == 'gravity' or field_type == 'dilat_gravity':
             sys.stdout.write('normalizing : ')
             sys.stdout.flush()
             max_mag_evnum = event_numbers[event_magnitudes.index(max(event_magnitudes))]
@@ -2105,8 +2108,12 @@ def event_field_animation(sim_file, output_directory, event_range,
                     else:
                         cb_title = 'Total displacement [m]'
 
-                elif field_type == 'gravity':
+                elif field_type == 'gravity' or field_type == 'dilat_gravity':
                     cb_title = r'Gravity changes [$\mu gal$]'
+                    
+                # If contour plot, match colorbar ticks to contour values
+                if contours is not None:
+                    cb.set_ticks(contours)
 
                 cb_ax.set_title(cb_title, fontproperties=font, color=cb_fontcolor, size=cb_fontsize, va='top', ha='left', position=(0,-1.5) )
 
@@ -2235,7 +2242,7 @@ def event_field_animation(sim_file, output_directory, event_range,
 #-------------------------------------------------------------------------------
 # plots event fields
 #-------------------------------------------------------------------------------
-def plot_event_field(sim_file, evnum, output_directory, field_type='displacement', fringes=True, padding=0.08, cutoff=None, tag=None, hi_res=False,lat_lon=False, angles=None, contours=None):
+def plot_event_field(sim_file, evnum, output_directory, field_type='displacement', fringes=True, padding=0.08, cutoff=None, tag=None, hi_res=False,lat_lon=False, angles=None, contours=None, lat_range=None, lon_range=None, wavelength=0.03):
     
     sys.stdout.write('Initializing plot :: ')
     sys.stdout.flush()
@@ -2277,21 +2284,35 @@ def plot_event_field(sim_file, evnum, output_directory, field_type='displacement
         events = VCEvents(sim_data)
         geometry = VCGeometry(sim_data)
         
-        min_lat = geometry.min_lat
-        max_lat = geometry.max_lat
-        min_lon = geometry.min_lon
-        max_lon = geometry.max_lon
-        base_lat = geometry.base_lat
-        base_lon = geometry.base_lon
-
+        fault_traces = geometry.get_fault_traces()
+    
         event_data = events[evnum]
         event_element_slips = events.get_event_element_slips(evnum)
         ele_getter = itemgetter(*event_element_slips.keys())
         event_element_data = ele_getter(geometry)
         if len(event_element_slips) == 1:
             event_element_data = [event_element_data]
-        fault_traces = geometry.get_fault_traces()
+
         event_sections = geometry.sections_with_elements(event_element_slips.keys())
+        base_lat = geometry.base_lat
+        base_lon = geometry.base_lon
+
+        if lat_range is None or lon_range is None:
+            min_lat = geometry.min_lat
+            max_lat = geometry.max_lat
+            min_lon = geometry.min_lon
+            max_lon = geometry.max_lon
+        else:
+            min_lat,max_lat = lat_range
+            min_lon,max_lon = lon_range
+            # Force map bounds from event elements only
+            #converter = quakelib.Conversion(base_lat, base_lon)
+            #min_x,max_x,min_y,max_y = geometry.bounds_xyz_from_elements(event_element_data)
+            #min_lat = converter.convert2LatLon(quakelib.Vec3(min_x,min_y,0)).lat()
+            #max_lat = converter.convert2LatLon(quakelib.Vec3(max_x,max_y,0)).lat()
+            #min_lon = converter.convert2LatLon(quakelib.Vec3(min_x,min_y,0)).lon()
+            #max_lon = converter.convert2LatLon(quakelib.Vec3(max_x,max_y,0)).lon()
+
     
         sys.stdout.write('{} elements in {} sections : '.format(len(event_element_slips), len(event_sections)))
         sys.stdout.flush()
@@ -2340,7 +2361,7 @@ def plot_event_field(sim_file, evnum, output_directory, field_type='displacement
         sys.stdout.flush()
 
         if field_type == 'displacement':
-            EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon)
+            EFP = vcplotutils.VCDisplacementFieldPlotter(EF.min_lat, EF.max_lat, EF.min_lon, EF.max_lon, wavelength=wavelength)
             if angles is None:
                 EFP.calculate_look_angles(geometry[:])
             else:
