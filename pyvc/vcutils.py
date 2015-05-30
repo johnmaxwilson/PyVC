@@ -645,10 +645,10 @@ class VCGravityField(VCField):
                     dG += result
 
                 # New, not thoroughly tested
-                if self.free_air:
-                    np.save('{}dG_total.npy'.format(save_file_prefix), dG)
-                else:
+                if self.dilat:
                     np.save('{}dG_dilat.npy'.format(save_file_prefix), dG)
+                else:
+                    np.save('{}dG_total.npy'.format(save_file_prefix), dG)
 
 
 
@@ -661,11 +661,10 @@ class VCGravityField(VCField):
             self.init_field(0.0)
         
         try:
-            # New, not thoroughly tested
-            if self.free_air:
-                dG = np.load('{}dG_total.npy'.format(file_prefix))
-            else:
+            if self.dilat:
                 dG = np.load('{}dG_dilat.npy'.format(file_prefix))
+            else:
+                dG = np.load('{}dG_total.npy'.format(file_prefix))
 
             '''
             min = np.amin(np.fabs(dG[dG.nonzero()]))
