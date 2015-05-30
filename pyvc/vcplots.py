@@ -2300,9 +2300,9 @@ def plot_event_field(sim_file, evnum, output_directory, field_type='displacement
         if field_type == 'displacement':
             EF = vcutils.VCDisplacementField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding)
         elif field_type == 'gravity':
-            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=True)
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,dilat=False)
         elif field_type == 'dilat_gravity':
-            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,free_air=False)
+            EF = vcutils.VCGravityField(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=padding,dilat=True)
 
 
         sys.stdout.write('done\n')

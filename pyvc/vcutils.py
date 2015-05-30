@@ -418,9 +418,9 @@ class VCFieldProcessor(multiprocessing.Process):
             elif self.type == 'gravity':
                 # calculate the gravity changes
                 if self.cutoff is None:
-                    dGrav_1d = event.event_gravity_changes(self.field_1d, lame_lambda, lame_lambda)
+                    dGrav_1d = event.event_gravity_changes(self.field_1d, lame_lambda, lame_mu)
                 else:
-                    dGrav_1d = event.event_gravity_changes(self.field_1d, lame_lambda, lame_lambda, self.cutoff)
+                    dGrav_1d = event.event_gravity_changes(self.field_1d, lame_lambda, lame_mu, self.cutoff)
                 dGrav = np.array(dGrav_1d).reshape((self.lat_size,self.lon_size))
                 
                 # store the result
@@ -428,9 +428,9 @@ class VCFieldProcessor(multiprocessing.Process):
             elif self.type == 'dilat_gravity':
                 # calculate the gravity changes
                 if self.cutoff is None:
-                    dGrav_1d = event.event_dilat_gravity_changes(self.field_1d, lame_lambda, lame_lambda)
+                    dGrav_1d = event.event_dilat_gravity_changes(self.field_1d, lame_lambda, lame_mu)
                 else:
-                    dGrav_1d = event.event_dilat_gravity_changes(self.field_1d, lame_lambda, lame_lambda, self.cutoff)
+                    dGrav_1d = event.event_dilat_gravity_changes(self.field_1d, lame_lambda, lame_mu, self.cutoff)
                 dGrav = np.array(dGrav_1d).reshape((self.lat_size,self.lon_size))
                 
                 # store the result
@@ -568,7 +568,7 @@ class VCField(object):
 # A class to handle calculating event gravity changes
 #-------------------------------------------------------------------------------
 class VCGravityField(VCField):
-    def __init__(self, min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=0.01, map_res='i', map_proj='cyl',free_air=True):
+    def __init__(self, min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding=0.01, map_res='i', map_proj='cyl',dilat=True):
         
         super(VCGravityField,self).__init__(min_lat, max_lat, min_lon, max_lon, base_lat, base_lon, padding, map_res, map_proj)
         
@@ -580,7 +580,7 @@ class VCGravityField(VCField):
         
         self.dG = None
         self.dG_min = sys.float_info.max
-        self.free_air = free_air
+        self.dilat = dilat
 
 
     #---------------------------------------------------------------------------
@@ -611,10 +611,10 @@ class VCGravityField(VCField):
         #-----------------------------------------------------------------------
         # Run the field calculation. The results are stored in self.results
         #-----------------------------------------------------------------------
-        if self.free_air:
-            super(VCGravityField,self).calculate_field_values(event_element_data, event_element_slips, cutoff, type='gravity')
-        else:
+        if self.dilat:
             super(VCGravityField,self).calculate_field_values(event_element_data, event_element_slips, cutoff, type='dilat_gravity')
+        else:
+            super(VCGravityField,self).calculate_field_values(event_element_data, event_element_slips, cutoff, type='gravity')
         
         #-----------------------------------------------------------------------
         # Combine the results
