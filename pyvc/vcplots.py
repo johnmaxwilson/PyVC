@@ -32,6 +32,68 @@ import quakelib
 
 
 
+
+
+
+#-------------------------------------------------------------------------------
+# New plot to check stress changes for events  
+#-------------------------------------------------------------------------------
+def event_stress_changes(sim_file, event_range=None, section_filter=None,
+    magnitude_filter=None):
+
+    #---------------------------------------------------------------------------
+    # Get the data.
+    #---------------------------------------------------------------------------
+    with VCSimData() as sim_data:
+        # open the simulation data file
+        sim_data.open_file(sim_file)
+
+        # instantiate the vc classes passing in an instance of the VCSimData
+        # class
+        events = VCEvents(sim_data)
+        
+        event_data = events.get_event_data(['event_year', 'event_shear_init', 'event_shear_final', 'event_normal_init', 'event_normal_final'], event_range=event_range, magnitude_filter=magnitude_filter, section_filter=section_filter)
+
+    event_years = np.array(event_data['event_year'])
+    
+    shear_inits = np.array(event_data['event_shear_init'])
+    shear_finals = np.array(event_data['event_shear_final'])
+    shear_changes = (shear_finals - shear_inits)/shear_inits
+    shear_x_ave, shear_y_ave = vcplotutils.calculate_averages(event_years, shear_changes)
+    shear_file = "event_shear_changes_"+sim_file.split(".")[0]+".png"
+    
+    normal_inits = np.array(event_data['event_normal_init'])
+    normal_finals = np.array(event_data['event_normal_final'])
+    normal_changes = (normal_finals - normal_inits)/normal_inits
+    normal_x_ave, normal_y_ave = vcplotutils.calculate_averages(event_years, normal_changes)
+    normal_file = "event_normal_changes_"+sim_file.split(".")[0]+".png"
+
+    # Plot shear stress changes and binned average
+    fig1    = mplt.figure(dpi=100)
+    ax_1    = fig1.add_subplot(111)
+    
+    ax_1.scatter(event_years, shear_changes, color='g')
+    ax_1.set_ylabel('fractional stress change')
+    ax_1.set_xlabel('simulation time [years]')
+    mplt.title("Event shear stress changes")
+    ax_1.plot(shear_x_ave, shear_y_ave, lw=2, c='k', label="binned average")
+    mplt.legend(loc='best')
+    mplt.savefig(shear_file, dpi=100)
+    mplt.clf()
+    
+    # Plot normal stress changes and binned average
+    fig2    = mplt.figure(dpi=100)
+    ax_2    = fig2.add_subplot(111)
+    
+    ax_2.scatter(event_years, normal_changes, color='g')
+    ax_2.set_ylabel('fractional stress change')
+    ax_2.set_xlabel('simulation time [years]')
+    ax_2.plot(normal_x_ave, normal_y_ave, lw=2, c='k', label="binned average")
+    mplt.legend(loc='best')
+    mplt.title("Event normal stress changes")
+    mplt.savefig(normal_file, dpi=100)
+    mplt.clf()
+
 #-------------------------------------------------------------------------------
 # New plot to check median recurrence interval vs mode  
 #-------------------------------------------------------------------------------
@@ -85,8 +147,6 @@ def recurrence_stats(sim_file, event_range=None, section_filter=None,
     mplt.legend(loc='best')
     
     mplt.savefig('local/test.pdf', dpi=70)
-
-
 
 
 #-------------------------------------------------------------------------------
@@ -3202,7 +3262,7 @@ def magnitude_rupture_area(sim_file, output_file=None, event_range=None, section
         axis_format='semilogx',
         scale=scale,
         add_lines=[
-            {'label':'binned average', 'x':x_ave, 'y':y_ave},
+            {'label':'binned average', 'x':x_ave, 'y':y_ave, 'c':'#E3E3EC'},
             {'label':'WC', 'x':x_WC, 'y':y_WC, 'ls':'--', 'c':'red'}
         ],
         axis_labels = {'x':r'Rupture Area [km$^\mathsf{2}$]', 'y':'Magnitude'},
@@ -3251,7 +3311,7 @@ def magnitude_average_slip(sim_file, output_file=None, event_range=None, section
         axis_format='semilogx',
         scale=scale,
         add_lines=[
-            {'label':'binned average', 'x':x_ave, 'y':y_ave},
+            {'label':'binned average', 'x':x_ave, 'y':y_ave, 'c':'#E3E3EC'},
             {'label':'WC', 'x':x_WC, 'y':y_WC, 'ls':'--', 'c':'red'}
         ],
         axis_labels = {'y':'Magnitude', 'x':'Average Slip [m]'},
