@@ -95,7 +95,88 @@ def event_stress_changes(sim_file, event_range=None, section_filter=None,
     mplt.clf()
 
 #-------------------------------------------------------------------------------
-# New plot to check median recurrence interval vs mode  
+# Plot to check number of event sweeps
+#-------------------------------------------------------------------------------
+def number_of_sweeps(sim_file, event_range=None, section_filter=None,
+    magnitude_filter=None, log=False):
+
+    #---------------------------------------------------------------------------
+    # Get the data.
+    #---------------------------------------------------------------------------
+    with VCSimData() as sim_data:
+        # open the simulation data file
+        sim_data.open_file(sim_file)
+
+        # instantiate the vc classes passing in an instance of the VCSimData
+        # class
+        events = VCEvents(sim_data)
+        
+        event_data = events.get_event_data(['event_year', 'start_sweep_rec', 'end_sweep_rec'], event_range=event_range, magnitude_filter=magnitude_filter, section_filter=section_filter)
+
+    event_years = np.array(event_data['event_year'])
+    
+    start_sweeps = np.array(event_data['start_sweep_rec'])
+    end_sweeps = np.array(event_data['end_sweep_rec'])
+    num_sweeps = end_sweeps - start_sweeps
+    x_ave, y_ave = vcplotutils.calculate_averages(event_years, num_sweeps)
+    if log: filename = "num_event_sweeps_log_"+sim_file.split(".")[0]+".png"
+    else: filename = "num_event_sweeps_"+sim_file.split(".")[0]+".png"
+
+    # Plot shear stress changes and binned average
+    fig1    = mplt.figure(dpi=100)
+    ax_1    = fig1.add_subplot(111)
+    
+    ax_1.scatter(event_years, num_sweeps, color='g')
+    ax_1.set_ylabel('number of event sweeps')
+    ax_1.set_xlabel('simulation time [years]')
+    ax_1.plot(x_ave, y_ave, lw=2, c='k', label="binned average")
+    if log: ax_1.set_yscale('log')
+    mplt.legend(loc='best')
+    mplt.savefig(filename, dpi=100)
+    mplt.clf()
+
+
+#-------------------------------------------------------------------------------
+# Plot to check event mean slip
+#-------------------------------------------------------------------------------
+def event_mean_slip(sim_file, event_range=None, section_filter=None,
+    magnitude_filter=None,log=False):
+
+    #---------------------------------------------------------------------------
+    # Get the data.
+    #---------------------------------------------------------------------------
+    with VCSimData() as sim_data:
+        # open the simulation data file
+        sim_data.open_file(sim_file)
+
+        # instantiate the vc classes passing in an instance of the VCSimData
+        # class
+        events = VCEvents(sim_data)
+        
+        event_data = events.get_event_data(['event_year', 'event_average_slip'], event_range=event_range, magnitude_filter=magnitude_filter, section_filter=section_filter)
+
+    event_years = np.array(event_data['event_year'])
+    
+    slips = np.array(event_data['event_average_slip'])
+    x_ave, y_ave = vcplotutils.calculate_averages(event_years, slips)
+    if log: filename = "event_mean_slips_log_"+sim_file.split(".")[0]+".png"
+    else: filename = "event_mean_slips_"+sim_file.split(".")[0]+".png"
+
+    # Plot shear stress changes and binned average
+    fig1    = mplt.figure(dpi=100)
+    ax_1    = fig1.add_subplot(111)
+    
+    ax_1.scatter(event_years, slips, color='g')
+    ax_1.set_ylabel('event mean slip [m]')
+    ax_1.set_xlabel('simulation time [years]')
+    ax_1.plot(x_ave, y_ave, lw=2, c='k', label="binned average")
+    if log: ax_1.set_yscale('log')
+    mplt.legend(loc='best')
+    mplt.savefig(filename, dpi=100)
+    mplt.clf()
+
+#-------------------------------------------------------------------------------
+# Plot to check median recurrence interval vs mode  
 #-------------------------------------------------------------------------------
 def recurrence_stats(sim_file, event_range=None, section_filter=None,
     magnitude_filter=None, Nbins=20, title_str=""):
